@@ -1,0 +1,8 @@
+name = "family-travel-tracker"
+compatibility_date = "2025-01-01"
+
+# Cloudflare Pages will read this for D1 bindings in production.
+[[d1_databases]]
+binding = "DB"
+database_name = "family-travel-tracker"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
