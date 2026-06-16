@@ -57,6 +57,7 @@ export function FlightSummaryModal({
       setCreateError(null);
       const summary = await api.summaries.create(slug, rows.map(({ card, segment }) => ({
         passenger: card.traveler_name,
+        trip_name: card.trip_name,
         flight_number: segment.flight_number,
         airline: segment.airline,
         dep_airport: segment.dep_airport,

@@ -1,4 +1,4 @@
-import type { ApiError, Booking, BookingCard, SharedSummary, SharedSummaryRow, Traveler } from "../types";
+import type { ApiError, Booking, BookingCard, SharedSummary, SharedSummaryRow, Traveler, Trip } from "../types";
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -19,9 +19,15 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   travelers: {
     list: () => req<Traveler[]>("/api/travelers"),
-    create: (name: string) => req<Traveler>("/api/travelers", { method: "POST", body: JSON.stringify({ name }) }),
-    update: (id: string, name: string) => req<Traveler>(`/api/travelers/${id}`, { method: "PUT", body: JSON.stringify({ name }) }),
+    create: (name: string, color?: string) => req<Traveler>("/api/travelers", { method: "POST", body: JSON.stringify({ name, color }) }),
+    update: (id: string, payload: { name: string; color?: string | null }) => req<Traveler>(`/api/travelers/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
     remove: (id: string) => req<{ ok: true }>(`/api/travelers/${id}`, { method: "DELETE" }),
+  },
+  trips: {
+    list: () => req<Trip[]>("/api/trips"),
+    create: (name: string) => req<Trip>("/api/trips", { method: "POST", body: JSON.stringify({ name }) }),
+    update: (id: string, name: string) => req<Trip>(`/api/trips/${id}`, { method: "PUT", body: JSON.stringify({ name }) }),
+    remove: (id: string) => req<{ ok: true }>(`/api/trips/${id}`, { method: "DELETE" }),
   },
   bookings: {
     // returns cards already split per traveler per leg

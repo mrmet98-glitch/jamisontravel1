@@ -2,6 +2,7 @@ import { err, json, nowISO, readJson } from "../../_utils";
 
 type SummaryRow = {
   passenger: string;
+  trip_name?: string | null;
   flight_number: string;
   airline: string;
   dep_airport: string;
