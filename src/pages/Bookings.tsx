@@ -8,6 +8,8 @@ import { BookingModal } from "../components/BookingModal";
 import { CalendarMonth } from "../components/CalendarMonth";
 import { CancelTravelerModal } from "../components/CancelTravelerModal";
 import { FlightSummaryModal } from "../components/FlightSummaryModal";
+import { FlightEventList, PickupDropoffPanel, TimelinePanel, TodayWeekPanel } from "../components/TravelPanels";
+import { flightEvents } from "../lib/flightEvents";
 import { format } from "date-fns";
 
 function isFlownCard(card: BookingCard): boolean {
@@ -23,18 +25,20 @@ export function Bookings() {
   const [cards, setCards] = useState<BookingCard[]>([]);
   const [travelers, setTravelers] = useState<Traveler[]>([]);
   const [travelerFilter, setTravelerFilter] = useState<string>("all");
-  const [view, setView] = useState<"list" | "calendar">("list");
+  const [view, setView] = useState<"list" | "calendar" | "day" | "timeline" | "pickup">("list");
   const [showAll, setShowAll] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingBookingId, setEditingBookingId] = useState<string | null>(null);
+  const [duplicatingBookingId, setDuplicatingBookingId] = useState<string | null>(null);
 
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelCard, setCancelCard] = useState<BookingCard | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
 
   const [calMonth, setCalMonth] = useState<string>(() => format(new Date(), "yyyy-MM"));
+  const [calDate, setCalDate] = useState<string>(() => format(new Date(), "yyyy-MM-dd"));
 
   async function load() {
     try {
@@ -61,14 +65,24 @@ export function Bookings() {
   }, [cards, showAll]);
 
   const calCards = useMemo(() => filtered, [filtered]);
+  const events = useMemo(() => flightEvents(calCards, showAll), [calCards, showAll]);
+  const dynamicEvents = useMemo(() => flightEvents(cards.filter(c => !isFlownCard(c)), false), [cards]);
 
   function openNew() {
     setEditingBookingId(null);
+    setDuplicatingBookingId(null);
     setModalOpen(true);
   }
 
   function openEdit(bookingId: string) {
     setEditingBookingId(bookingId);
+    setDuplicatingBookingId(null);
+    setModalOpen(true);
+  }
+
+  function openDuplicate(bookingId: string) {
+    setEditingBookingId(null);
+    setDuplicatingBookingId(bookingId);
     setModalOpen(true);
   }
 
@@ -90,6 +104,9 @@ export function Bookings() {
           <div className="flex items-center gap-2">
             <Button variant={view === "list" ? "primary" : "ghost"} size="sm" onClick={() => setView("list")}>List</Button>
             <Button variant={view === "calendar" ? "primary" : "ghost"} size="sm" onClick={() => setView("calendar")}>Calendar</Button>
+            <Button variant={view === "day" ? "primary" : "ghost"} size="sm" onClick={() => setView("day")}>Day</Button>
+            <Button variant={view === "timeline" ? "primary" : "ghost"} size="sm" onClick={() => setView("timeline")}>Timeline</Button>
+            <Button variant={view === "pickup" ? "primary" : "ghost"} size="sm" onClick={() => setView("pickup")}>Pickup</Button>
             <Button size="sm" onClick={() => setSummaryOpen(true)}>Create summary</Button>
             <Button variant="primary" size="sm" onClick={openNew}>+ Add booking</Button>
           </div>
@@ -101,6 +118,8 @@ export function Bookings() {
               {error}
             </div>
           )}
+
+          <TodayWeekPanel events={dynamicEvents} onPick={openEdit} />
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
             <Select label="Filter by traveler" value={travelerFilter} onChange={(e) => setTravelerFilter(e.target.value)}>
@@ -121,6 +140,12 @@ export function Bookings() {
                 ))}
               </Select>
             )}
+            {view === "day" && (
+              <div>
+                <label className="block text-xs font-mono text-slate-400 mb-1">Day</label>
+                <input className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm" type="date" value={calDate} onChange={(e) => setCalDate(e.target.value)} />
+              </div>
+            )}
           </div>
 
           {view === "list" ? (
@@ -130,6 +155,7 @@ export function Bookings() {
                   key={`${c.booking_id}:${c.traveler_id}:${c.kind}:${c.label}`}
                   card={c}
                   onEdit={openEdit}
+                  onDuplicate={openDuplicate}
                   onCancel={openCancel}
                 />
               ))}
@@ -137,8 +163,14 @@ export function Bookings() {
                 <div className="text-sm text-slate-400">No bookings to show.</div>
               )}
             </div>
+          ) : view === "calendar" ? (
+            <CalendarMonth monthISO={calMonth} events={events} onPickBooking={(id) => openEdit(id)} />
+          ) : view === "day" ? (
+            <FlightEventList dateISO={calDate} events={events} onPick={openEdit} />
+          ) : view === "timeline" ? (
+            <TimelinePanel events={events} onPick={openEdit} />
           ) : (
-            <CalendarMonth monthISO={calMonth} cards={calCards} onPickBooking={(id) => openEdit(id)} />
+            <PickupDropoffPanel events={events.filter(e => e.traveler_status !== "canceled")} onPick={openEdit} />
           )}
         </div>
       </div>
@@ -148,6 +180,7 @@ export function Bookings() {
         onClose={() => setModalOpen(false)}
         onSaved={load}
         bookingId={editingBookingId}
+        duplicateFromId={duplicatingBookingId}
       />
 
       <CancelTravelerModal

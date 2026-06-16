@@ -1,22 +1,23 @@
 import React, { useMemo, useState } from "react";
-import type { BookingCard } from "../types";
 import { addDays, endOfMonth, endOfWeek, format, isSameMonth, startOfMonth, startOfWeek } from "date-fns";
 import { Modal } from "./Modal";
+import { eventColor, type FlightEvent } from "../lib/flightEvents";
 
 type Item = {
   date: string; // YYYY-MM-DD
   label: string;
   sub: string;
   id: string;
+  color: string;
 };
 
 export function CalendarMonth({
   monthISO,
-  cards,
+  events,
   onPickBooking,
 }: {
   monthISO: string; // YYYY-MM (first day assumed)
-  cards: BookingCard[];
+  events: FlightEvent[];
   onPickBooking: (bookingId: string) => void;
 }) {
   const first = startOfMonth(new Date(monthISO + "-01T00:00:00"));
@@ -26,20 +27,21 @@ export function CalendarMonth({
 
   const itemsByDate = useMemo(() => {
     const map = new Map<string, Item[]>();
-    for (const c of cards) {
-      const arr = map.get(c.start_date) ?? [];
+    for (const e of events) {
+      const arr = map.get(e.segment.dep_date) ?? [];
       arr.push({
-        date: c.start_date,
-        id: `${c.booking_id}:${c.traveler_id}:${c.kind}:${c.label}`,
-        label: `${c.traveler_name} · ${c.route_summary}`,
-        sub: c.flight_numbers,
+        date: e.segment.dep_date,
+        id: e.id,
+        label: `${e.segment.dep_time} · ${e.traveler_name} · ${e.segment.dep_airport}→${e.segment.arr_airport}`,
+        sub: `${e.segment.flight_number || "—"} ${e.segment.airline || ""}${e.trip_name ? ` · ${e.trip_name}` : ""}`,
+        color: eventColor(e.traveler_color),
       });
-      map.set(c.start_date, arr);
+      map.set(e.segment.dep_date, arr);
     }
     // stable sort per day
     for (const [k, v] of map) map.set(k, v.sort((a,b) => a.label.localeCompare(b.label)));
     return map;
-  }, [cards]);
+  }, [events]);
 
   const days: Date[] = [];
   for (let d = gridStart; d <= gridEnd; d = addDays(d, 1)) days.push(d);
@@ -72,6 +74,7 @@ export function CalendarMonth({
                     className="w-full text-left rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 px-2 py-1"
                     onClick={() => onPickBooking(it.id.split(":")[0])}
                     title={it.label}
+                    style={{ borderLeftColor: it.color, borderLeftWidth: 3 }}
                   >
                     <div className="text-[11px] font-mono truncate">{it.label}</div>
                     <div className="text-[10px] font-mono text-slate-400 truncate">{it.sub}</div>
@@ -102,6 +105,7 @@ export function CalendarMonth({
               key={it.id}
               className="w-full text-left rounded-xl border border-white/10 bg-black/20 hover:bg-white/10 px-4 py-3 transition"
               onClick={() => onPickBooking(it.id.split(":")[0])}
+              style={{ borderLeftColor: it.color, borderLeftWidth: 4 }}
             >
               <div className="font-medium">{it.label}</div>
               <div className="mt-1 text-sm font-mono text-slate-400">{it.sub || "Flight number not set"}</div>
