@@ -8,7 +8,7 @@ import { BookingModal } from "../components/BookingModal";
 import { CalendarMonth } from "../components/CalendarMonth";
 import { CancelTravelerModal } from "../components/CancelTravelerModal";
 import { FlightSummaryModal } from "../components/FlightSummaryModal";
-import { FlightEventList, PickupDropoffPanel, TimelinePanel, TodayWeekPanel } from "../components/TravelPanels";
+import { FlightEventList, PickupDropoffPanel, TimelinePanel, TodayWeekPanel, WeekPanel } from "../components/TravelPanels";
 import { flightEvents } from "../lib/flightEvents";
 import { format } from "date-fns";
 
@@ -25,7 +25,7 @@ export function Bookings() {
   const [cards, setCards] = useState<BookingCard[]>([]);
   const [travelers, setTravelers] = useState<Traveler[]>([]);
   const [travelerFilter, setTravelerFilter] = useState<string>("all");
-  const [view, setView] = useState<"list" | "calendar" | "day" | "timeline" | "pickup">("list");
+  const [view, setView] = useState<"list" | "calendar" | "week" | "day" | "timeline" | "pickup">("list");
   const [showAll, setShowAll] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,6 +39,7 @@ export function Bookings() {
 
   const [calMonth, setCalMonth] = useState<string>(() => format(new Date(), "yyyy-MM"));
   const [calDate, setCalDate] = useState<string>(() => format(new Date(), "yyyy-MM-dd"));
+  const [weekDate, setWeekDate] = useState<string>(() => format(new Date(), "yyyy-MM-dd"));
 
   async function load() {
     try {
@@ -60,7 +61,7 @@ export function Bookings() {
   useEffect(() => { load(); }, [travelerFilter]);
 
   const filtered = useMemo(() => {
-    const list = showAll ? cards : cards.filter(c => !isFlownCard(c));
+    const list = showAll ? cards : cards.filter(c => c.traveler_status !== "canceled" && !isFlownCard(c));
     return [...list].sort((a, b) => a.start_date.localeCompare(b.start_date));
   }, [cards, showAll]);
 
@@ -104,6 +105,7 @@ export function Bookings() {
           <div className="flex items-center gap-2">
             <Button variant={view === "list" ? "primary" : "ghost"} size="sm" onClick={() => setView("list")}>List</Button>
             <Button variant={view === "calendar" ? "primary" : "ghost"} size="sm" onClick={() => setView("calendar")}>Calendar</Button>
+            <Button variant={view === "week" ? "primary" : "ghost"} size="sm" onClick={() => setView("week")}>Week</Button>
             <Button variant={view === "day" ? "primary" : "ghost"} size="sm" onClick={() => setView("day")}>Day</Button>
             <Button variant={view === "timeline" ? "primary" : "ghost"} size="sm" onClick={() => setView("timeline")}>Timeline</Button>
             <Button variant={view === "pickup" ? "primary" : "ghost"} size="sm" onClick={() => setView("pickup")}>Pickup</Button>
@@ -140,6 +142,12 @@ export function Bookings() {
                 ))}
               </Select>
             )}
+            {view === "week" && (
+              <div>
+                <label className="block text-xs font-mono text-slate-400 mb-1">Week</label>
+                <input className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm" type="date" value={weekDate} onChange={(e) => setWeekDate(e.target.value)} />
+              </div>
+            )}
             {view === "day" && (
               <div>
                 <label className="block text-xs font-mono text-slate-400 mb-1">Day</label>
@@ -165,6 +173,8 @@ export function Bookings() {
             </div>
           ) : view === "calendar" ? (
             <CalendarMonth monthISO={calMonth} events={events} onPickBooking={(id) => openEdit(id)} />
+          ) : view === "week" ? (
+            <WeekPanel weekISO={weekDate} events={events} onPick={openEdit} />
           ) : view === "day" ? (
             <FlightEventList dateISO={calDate} events={events} onPick={openEdit} />
           ) : view === "timeline" ? (
